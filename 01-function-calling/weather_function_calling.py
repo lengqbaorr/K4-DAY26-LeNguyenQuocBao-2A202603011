@@ -1,10 +1,13 @@
-"""Function Calling thuần với OpenAI GPT-4o và weather tool chạy trong app."""
+"""Minh hoạ FUNCTION CALLING thuần với Google Gemini SDK.
 
-import json
-from pathlib import Path
+Tool `get_weather` được định nghĩa schema thủ công VÀ thực thi ngay trong
+chính file app này. Model chỉ QUYẾT ĐỊNH gọi tool nào; app mới là nơi chạy.
 
-from dotenv import load_dotenv
-from openai import OpenAI
+Cách chạy:
+    pip install -r ../requirements.txt
+    export GEMINI_API_KEY=...
+    python weather_function_calling.py
+"""
 
 import os
 import sys
@@ -27,10 +30,11 @@ client = genai.Client(api_key=api_key) if api_key else genai.Client()
 
 MODEL = "gemini-3.8-flash"
 
-MODEL = "gpt-4o"
 SYSTEM_INSTRUCTION = (
     "Bạn là trợ lý thời tiết thân thiện, trả lời bằng tiếng Việt tự nhiên. "
-    "Dùng emoji phù hợp. Tóm tắt ngắn gọn và đưa lời khuyên thực tế."
+    "Dùng emoji phù hợp (🌧️ 🌤️ 💨 💧). "
+    "Tóm tắt ngắn gọn, dễ hiểu, và đưa ra lời khuyên thực tế "
+    "(ví dụ: mang ô, mặc áo mỏng, ...)."
 )
 
 # 1. App tự định nghĩa schema của các tools
@@ -74,18 +78,24 @@ TOOLS = [
 
 # 2. App tự thực thi tool (hàm mock và hàm gọi API thật)
 def get_weather(city: str) -> str:
-    """Trả về thời tiết giả lập của thành phố để minh họa function calling."""
+    """Trả về thời tiết (mock) của *city*. Dùng làm tool cho model."""
     mock_data = {
         "Hà Nội": {
-            "nhiệt_độ": "29°C", "thời_tiết": "trời mưa nhẹ", "độ_ẩm": "82%",
+            "nhiệt_độ": "29°C",
+            "thời_tiết": "trời mưa nhẹ",
+            "độ_ẩm": "82%",
             "gió": {"hướng": "Đông Nam", "tốc_độ": "12 km/h"},
         },
         "Hồ Chí Minh": {
-            "nhiệt_độ": "33°C", "thời_tiết": "mưa rào", "độ_ẩm": "75%",
+            "nhiệt_độ": "33°C",
+            "thời_tiết": "mưa rào",
+            "độ_ẩm": "75%",
             "gió": {"hướng": "Tây Nam", "tốc_độ": "15 km/h"},
         },
         "Đà Nẵng": {
-            "nhiệt_độ": "30°C", "thời_tiết": "nhiều mây", "độ_ẩm": "78%",
+            "nhiệt_độ": "30°C",
+            "thời_tiết": "nhiều mây",
+            "độ_ẩm": "78%",
             "gió": {"hướng": "Đông", "tốc_độ": "10 km/h"},
         },
     }
@@ -173,10 +183,10 @@ TOOL_MAP = {
 
 
 def run(prompt: str) -> str:
-    """Để model chọn tool, app thực thi tool, rồi model tổng hợp câu trả lời."""
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    client = OpenAI()
-    input_items = [{"role": "user", "content": prompt}]
+    """Gửi *prompt* tới Gemini, tự động xử lý function calling và trả về câu trả lời cuối."""
+    contents: list[types.Content] = [
+        types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
+    ]
 
     # 3. Gọi model — model quyết định có gọi tool hay không
     resp = client.models.generate_content(
@@ -212,29 +222,15 @@ def run(prompt: str) -> str:
         contents.append(types.Content(role="user", parts=function_responses))
         resp = client.models.generate_content(
             model=MODEL,
-            instructions=SYSTEM_INSTRUCTION,
-            input=input_items,
-            tools=TOOLS,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                tools=TOOLS,
+                system_instruction=SYSTEM_INSTRUCTION,
+            ),
         )
-        calls = [item for item in response.output if item.type == "function_call"]
-        if not calls:
-            return response.output_text
 
-        input_items.extend(response.output)
-        for call in calls:
-            if call.name != "get_weather":
-                raise ValueError(f"Unsupported function: {call.name}")
-            args = json.loads(call.arguments)
-            print(f"  [model yêu cầu] {call.name}({args})")
-            result = get_weather(**args)  # App chạy hàm, model không chạy.
-            print(f"  [app thực thi]  -> {result}")
-            input_items.append({
-                "type": "function_call_output",
-                "call_id": call.call_id,
-                "output": result,
-            })
-
-    raise RuntimeError("Model exceeded the maximum number of tool-call rounds")
+    # 5. Model tổng hợp câu trả lời cuối
+    return resp.text
 
 
 if __name__ == "__main__":

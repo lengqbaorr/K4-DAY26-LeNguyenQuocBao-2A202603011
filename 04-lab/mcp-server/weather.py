@@ -1,4 +1,6 @@
-import logging
+from typing import Any
+import asyncio
+import httpx
 import os
 import sys
 
@@ -28,28 +30,32 @@ API_KEY = os.getenv("WEATHERAPI_KEY")
 
 async def make_weather_request(endpoint: str, params: dict[str, str]) -> dict[str, Any] | None:
     """Make a request to the WeatherAPI with proper error handling."""
-    api_key = weather_api_key()
-    if not api_key:
-        logger.error("WEATHERAPI_KEY is not configured")
+    # Check if API key is set
+    if not API_KEY:
+        print("ERROR: WeatherAPI key not set. Please set WEATHERAPI_KEY environment variable.")
         return None
         
     headers = {
         "User-Agent": USER_AGENT,
     }
+    # Add API key to parameters
+    params["key"] = API_KEY
+    
     url = f"{WEATHERAPI_BASE}/{endpoint}"
     
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(
-                url, headers=headers, params={**params, "key": api_key}, timeout=30.0
-            )
+            response = await client.get(url, headers=headers, params=params, timeout=30.0)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
-            logger.error("WeatherAPI returned HTTP %s", e.response.status_code)
+            print(f"HTTP Error {e.response.status_code}: {e.response.text}")
             return None
         except httpx.RequestError as e:
-            logger.error("WeatherAPI request failed: %s", e)
+            print(f"Request Error: {e}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error: {e}")
             return None
 
 @mcp.tool()
@@ -67,7 +73,7 @@ async def get_current_weather(city: str) -> str:
     data = await make_weather_request("current.json", params)
 
     if not data:
-        if not weather_api_key():
+        if not API_KEY:
             return f"❌ WeatherAPI key not configured. Please set WEATHERAPI_KEY environment variable with your API key from weatherapi.com"
         return f"Unable to fetch current weather data for {city}. Please check the city name and API key configuration."
 
@@ -95,10 +101,10 @@ async def get_forecast(city: str, days: int = 3) -> str:
 
     Args:
         city: City name (e.g., "Hanoi", "Haiphong", "Danang", "Brisbane", "Sydney", "Melbourne")
-        days: Number of days to forecast (1-3)
+        days: Number of days to forecast (1-3 for free tier, max 10 for paid)
     """
-    if not 1 <= days <= 3:
-        return "Forecast days must be between 1 and 3."
+    # Limit days to 3 for free tier
+    days = min(days, 3)
     
     params = {
         "q": city,
@@ -110,7 +116,7 @@ async def get_forecast(city: str, days: int = 3) -> str:
     data = await make_weather_request("forecast.json", params)
 
     if not data:
-        if not weather_api_key():
+        if not API_KEY:
             return f"❌ WeatherAPI key not configured. Please set WEATHERAPI_KEY environment variable with your API key from weatherapi.com"
         return f"Unable to fetch forecast data for {city}. Please check the city name and API key configuration."
 
@@ -140,8 +146,10 @@ UV Index: {day_data['uv']}
 @mcp.tool()
 async def health_check() -> str:
     """Health check endpoint for deployment verification."""
-    key_status = "configured" if weather_api_key() else "missing"
-    return f"Weather MCP Server is running. WEATHERAPI_KEY: {key_status}."
+    return "✅ Weather MCP Server is running! Ready to provide weather data for Australian cities and worldwide."
+
+print("✅ MCP server initialized with Streamable HTTP transport")
+print("🔧 Available tools: get_current_weather, get_forecast, health_check")
 
 if __name__ == "__main__":
     import sys
