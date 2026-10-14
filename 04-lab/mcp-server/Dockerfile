@@ -4,14 +4,11 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
-COPY pyproject.toml ./
+# Copy application and dependency metadata before installing
+COPY pyproject.toml weather.py ./
 
 # Install dependencies
-RUN pip install --no-cache-dir -e .
-
-# Copy application code
-COPY weather.py ./
+RUN pip install --no-cache-dir .
 
 # Expose port (Cloud Run will override this)
 EXPOSE 8080
