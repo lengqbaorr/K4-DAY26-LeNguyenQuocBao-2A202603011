@@ -40,18 +40,16 @@ AI agent built with **Google Agent Development Kit (ADK)** that uses tools from 
 
 ```bash
 cd ../mcp-server
-export WEATHERAPI_KEY="your_weatherapi_key"
+# Set WEATHERAPI_KEY in the repository root .env
 uv run python weather.py
 ```
 
 ### 2. Setup Environment
 
 ```bash
-cd mcp-client
+cd ../mcp-client
 
-# Create .env file with your Google API key
-# Get free key from: https://aistudio.google.com/apikey
-echo "GOOGLE_API_KEY=your_google_api_key_here" > .env
+# Set OPENAI_API_KEY in the same repository root .env
 ```
 
 ### 3. Install Dependencies
@@ -83,7 +81,6 @@ mcp-client/
 │   ├── agent.py           # Main agent with MCP connection
 │   └── __init__.py
 ├── pyproject.toml
-├── .env                   # Environment variables (create this)
 └── README.md
 ```
 
@@ -103,7 +100,7 @@ connection_params = StreamableHTTPConnectionParams(
 
 root_agent = Agent(
     name="weather_agent",
-    model="gemini-2.5-flash",
+    model=LiteLlm(model="openai/gpt-4o"),
     tools=[weather_tools],
 )
 ```
@@ -123,16 +120,16 @@ root_agent = Agent(
 3. **Timeout errors**: Server not started
    - Start the MCP server first, then the ADK client
 
-### Fallback Mode
+### Connection failure
 
-If MCP connection fails, the agent runs in fallback mode without tools.
-Fix the connection and restart ADK web.
+If MCP connection fails, fix the connection and restart ADK web. The agent does not run without its MCP tools.
 
 ## Environment Variables
 
-Create `.env` file:
+In the repository root `.env` file:
 ```bash
-GOOGLE_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
+WEATHERAPI_KEY=your_weatherapi_key
 ```
 
 ## Resources
