@@ -1,4 +1,4 @@
-# 01 — Function Calling thuần (Google Gemini SDK)
+# 01 — Function Calling thuần (OpenAI GPT-4o)
 
 Tool `get_weather` được **định nghĩa schema thủ công** và **thực thi ngay trong app**.
 Model chỉ quyết định gọi tool nào — app mới là nơi chạy.
@@ -17,7 +17,7 @@ User hỏi  →  Model quyết định gọi get_weather(city="Hà Nội")
 
 ```bash
 pip install -r ../requirements.txt
-export GEMINI_API_KEY=...
+# Điền OPENAI_API_KEY vào .env ở gốc repo
 python weather_function_calling.py
 ```
 
@@ -25,7 +25,7 @@ python weather_function_calling.py
 
 | File | Mô tả |
 |---|---|
-| `weather_function_calling.py` | Định nghĩa schema, thực thi tool, gọi model Gemini, xử lý vòng lặp function calling |
+| `weather_function_calling.py` | Định nghĩa schema, thực thi tool, gọi model GPT-4o, xử lý vòng lặp function calling |
 
 ---
 
@@ -89,7 +89,7 @@ Bước 1 — App chuẩn bị "hộp công cụ" cho model
 Bước 2 — Gửi prompt + schema cho model
 ═══════════════════════════════════════
 
-    App ──────────────────────────────────────────▶ Gemini
+    App ──────────────────────────────────────────▶ GPT-4o
     │  "Thời tiết HN và ĐN?"                      │
     │  + schema get_weather                       │
     │                                             │
@@ -99,7 +99,7 @@ Bước 2 — Gửi prompt + schema cho model
 Bước 3 — Model TRẢ VỀ yêu cầu gọi tool (không tự chạy!)
 ═════════════════════════════════════════════════════════
 
-    Gemini ──────────────────────────────────────▶ App
+    GPT-4o ───────────────────────────────────────▶ App
     │  function_calls:                             │
     │    [                                         │
     │      get_weather(city="Hà Nội"),             │
@@ -120,10 +120,10 @@ Bước 4 — App TỰ THI HÀNH hàm get_weather
 Bước 5 — Gửi kết quả lại cho model tổng hợp
 ════════════════════════════════════════════
 
-    App ──────────────────────────────────────────▶ Gemini
+    App ──────────────────────────────────────────▶ GPT-4o
     │  Kết quả: HN 29°C mưa, ĐN 30°C mây         │
     │                                            │
-    │  Gemini: "Hà Nội 29°C, mưa nhẹ 🌧️          │
+    │  GPT-4o: "Hà Nội 29°C, mưa nhẹ 🌧️          │
     │           nhớ mang ô nhé!                  │
     │           Đà Nẵng 30°C, nhiều mây 🌤️       │
     │           thời tiết dễ chịu!"              │
@@ -174,7 +174,7 @@ while resp.function_calls:
 ## Luồng hoạt động
 
 1. App định nghĩa `FunctionDeclaration` với schema viết tay (tên, tham số, kiểu)
-2. App gửi prompt + danh sách tool tới Gemini
+2. App gửi prompt + danh sách tool tới GPT-4o
 3. Model trả về `function_calls` — yêu cầu gọi `get_weather`
 4. App **tự chạy** hàm `get_weather()` và đưa kết quả trả lại model
 5. Model tổng hợp câu trả lời cuối cho user

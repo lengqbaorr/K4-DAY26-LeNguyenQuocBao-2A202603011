@@ -1,26 +1,22 @@
-"""
-Weather Agent - Connects to Remote MCP Server on Cloud Run
-Successfully connects to custom MCP HTTP endpoints!
-"""
-from google.adk import Agent
-from google.adk.tools.mcp_tool.mcp_toolset import McpToolset, StreamableHTTPConnectionParams
-import logging
+"""Google ADK agent using weather tools from a Streamable HTTP MCP server."""
+
 import os
+from pathlib import Path
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from dotenv import load_dotenv
+from google.adk import Agent
+from google.adk.models.lite_llm import LiteLlm
+from google.adk.tools.mcp_tool.mcp_toolset import (
+    McpToolset,
+    StreamableHTTPConnectionParams,
+)
 
-# Mặc định: server chạy local. Deploy lên Cloud Run thì đặt MCP_SERVER_URL trong .env
-# (ví dụ: https://<service>.run.app/mcp). verify_setup.py đọc cùng biến này.
+
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8085/mcp")
 
-logger.info(f"🌐 Initializing weather agent with remote MCP server")
-logger.info(f"📡 MCP Server: {MCP_SERVER_URL}")
-
-try:
-    # Create connection parameters for the remote MCP server
-    connection_params = StreamableHTTPConnectionParams(
+weather_tools = McpToolset(
+    connection_params=StreamableHTTPConnectionParams(
         url=MCP_SERVER_URL,
         timeout=30.0,  # Increased timeout for Cloud Run cold starts
     )

@@ -28,6 +28,8 @@ VALID_TOKENS: dict[str, str] = {
     os.environ.get("MCP_AUTH_TOKEN", "dev-token-abc123"): "dev-user",
     "prod-key-xyz789": "prod-service",
 }
+AUTH_PORT = int(os.environ.get("MCP_AUTH_PORT", "8000"))
+AUTH_BASE_URL = f"http://localhost:{AUTH_PORT}"
 
 
 class StaticTokenVerifier(TokenVerifier):
@@ -48,8 +50,9 @@ class StaticTokenVerifier(TokenVerifier):
 mcp = MCPServer(
     "weather-secure",
     auth=AuthSettings(
-        issuer_url="http://localhost:8000",
-        resource_server_url="http://localhost:8000",
+        issuer_url=AUTH_BASE_URL,
+        resource_server_url=AUTH_BASE_URL,
+        validate_token_resource=False,  # Demo verifier uses fixed local tokens.
     ),
     token_verifier=StaticTokenVerifier(),
 )
