@@ -2,15 +2,28 @@ from typing import Any
 import asyncio
 import httpx
 import os
-from mcp.server.fastmcp import FastMCP
+import sys
 
-# Initialize FastMCP server
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 port = int(os.getenv("PORT", 8085))
-mcp = FastMCP("weather", host="0.0.0.0", port=port)
+
+try:
+    from mcp.server.mcpserver import MCPServer
+    mcp = MCPServer("weather")
+    _is_v2 = True
+except (ImportError, ModuleNotFoundError):
+    from mcp.server.fastmcp import FastMCP
+    mcp = FastMCP("weather", host="0.0.0.0", port=port)
+    _is_v2 = False
 
 # Constants
 WEATHERAPI_BASE = "https://api.weatherapi.com/v1"
 USER_AGENT = "weather-app/1.0"
+
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv(usecwd=True))
 
 # Get API key from environment variable
 API_KEY = os.getenv("WEATHERAPI_KEY")
@@ -146,7 +159,10 @@ if __name__ == "__main__":
     
     if is_cloud_run or is_standalone:
         print(f"🚀 Starting MCP server on http://0.0.0.0:{port}/mcp")
-        mcp.run(transport="streamable-http")
+        if _is_v2:
+            mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
+        else:
+            mcp.run(transport="streamable-http")
     else:
         print("Starting FastMCP server in stdio mode for local client", file=sys.stderr)
         mcp.run()

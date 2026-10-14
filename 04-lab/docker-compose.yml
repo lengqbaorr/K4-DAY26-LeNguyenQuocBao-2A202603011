@@ -1,0 +1,13 @@
+services:
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: weather-mcp-server
+    ports:
+      - "8085:8085"
+    environment:
+      - PORT=8085
+    env_file:
+      - ./mcp-server/.env
+    restart: unless-stopped
